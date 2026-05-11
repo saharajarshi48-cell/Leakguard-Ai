@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
-import { ShieldCheck, Mail, Zap, TrendingDown, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Mail, Zap, TrendingDown, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -81,7 +81,86 @@ export default function LandingPage() {
             <p className="text-[var(--muted)]">Get notified before a free trial converts into a paid subscription so you can cancel in time.</p>
           </div>
         </div>
+
+        {/* How It Works Section */}
+        <div className="mt-32 max-w-5xl w-full mx-auto text-center mb-32 z-10 relative">
+          <h2 className="text-4xl font-bold text-white mb-16">How LeakGuard Works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--surface-hover)] border border-[var(--primary-glow)] flex items-center justify-center mb-6 text-2xl font-bold text-[var(--primary)]">1</div>
+              <h3 className="text-xl font-bold mb-3 text-white">Connect Securely</h3>
+              <p className="text-[var(--muted)] max-w-xs">Link your Gmail with strict, read-only access. We only look for receipts and subscriptions.</p>
+            </div>
+            <div className="flex flex-col items-center mt-8 md:mt-0">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--surface-hover)] border border-[var(--primary-glow)] flex items-center justify-center mb-6 text-2xl font-bold text-[var(--primary)]">2</div>
+              <h3 className="text-xl font-bold mb-3 text-white">AI Scans Receipts</h3>
+              <p className="text-[var(--muted)] max-w-xs">Our AI instantly extracts pricing, renewal dates, and hidden free trials from your inbox.</p>
+            </div>
+            <div className="flex flex-col items-center mt-8 md:mt-0">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--surface-hover)] border border-[var(--primary-glow)] flex items-center justify-center mb-6 text-2xl font-bold text-[var(--primary)]">3</div>
+              <h3 className="text-xl font-bold mb-3 text-white">Save Money</h3>
+              <p className="text-[var(--muted)] max-w-xs">Review your unified dashboard and cancel the sneaky subscriptions draining your wallet.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust & Security Section */}
+        <div className="w-full max-w-5xl mx-auto mb-32 z-10 relative">
+          <div className="p-8 md:p-12 rounded-3xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-green-500 rounded-full blur-[120px] opacity-10 pointer-events-none" />
+            
+            <div className="flex flex-col md:flex-row items-center gap-12">
+              <div className="flex-1 text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/30 bg-green-500/10 text-green-400 text-sm mb-6 font-medium">
+                  <Lock className="w-4 h-4" />
+                  <span>Bank-Level Security</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Your data is safe, encrypted, and yours alone.</h2>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0 mt-0.5" />
+                    <p className="text-[var(--muted)]"><strong>Read-Only Access:</strong> We can't send, delete, or modify your emails. We only read them to find receipts.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0 mt-0.5" />
+                    <p className="text-[var(--muted)]"><strong>We Don't Read Personal Mail:</strong> Our AI filters strictly for purchase and subscription keywords.</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0 mt-0.5" />
+                    <p className="text-[var(--muted)]"><strong>Data Never Sold:</strong> We make money by helping you save, not by selling your information to third parties.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full md:w-1/3 flex justify-center">
+                <div className="w-48 h-48 rounded-full border-4 border-[var(--surface-hover)] bg-[var(--background)] flex items-center justify-center shadow-2xl relative">
+                  <div className="absolute inset-0 rounded-full border border-green-500/20 animate-ping opacity-20" />
+                  <ShieldCheck className="w-24 h-24 text-green-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-[var(--border)] bg-black/40 backdrop-blur-md py-12 mt-auto z-10 relative">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="text-[var(--primary)] w-6 h-6" />
+            <span className="font-bold text-lg text-white">LeakGuard AI</span>
+          </div>
+          
+          <div className="flex gap-8 text-sm text-[var(--muted)]">
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+            <a href="mailto:support@leakguard.ai" className="hover:text-white transition-colors">Contact Support</a>
+          </div>
+          
+          <div className="text-sm text-[var(--muted)]">
+            &copy; {new Date().getFullYear()} LeakGuard AI. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

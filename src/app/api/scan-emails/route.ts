@@ -1,14 +1,35 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { z } from 'zod';
+import rateLimit, { getClientIp } from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+  interval: 60000, // 60 seconds
+  uniqueTokenPerInterval: 500, // Max 500 users per second
+});
+
+const scanSchema = z.object({
+  access_token: z.string().min(1, "Access token is required").max(2048, "Access token is too long"),
+});
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const googleAccessToken = body.access_token;
-
-    if (!googleAccessToken) {
-      return NextResponse.json({ error: 'Missing access_token' }, { status: 400 });
+    const ip = getClientIp(request);
+    try {
+      await limiter.check(10, ip); // 10 requests per minute per IP
+    } catch {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': '60' } });
     }
+
+    const body = await request.json();
+    
+    // Validate request body using Zod
+    const result = scanSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
+    }
+
+    const googleAccessToken = result.data.access_token;
 
     const oauth2Client = new google.auth.OAuth2();
     oauth2Client.setCredentials({ access_token: googleAccessToken });

@@ -1,19 +1,49 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
+import rateLimit, { getClientIp } from '@/lib/rate-limit';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+const limiter = rateLimit({
+  interval: 60000, // 60 seconds
+  uniqueTokenPerInterval: 500,
+});
+
+const analyzeSchema = z.object({
+  userId: z.string().uuid("Invalid User ID format").optional().or(z.literal('')),
+  emails: z.array(
+    z.object({
+      subject: z.string().max(500, "Subject too long"),
+      from: z.string().max(255, "Sender too long"),
+      date: z.string().max(100, "Date string too long"),
+      snippet: z.string().max(5000, "Snippet too long"),
+    }).strict() // Rejects unexpected fields
+  ).max(20, "Too many emails to analyze at once"),
+});
+
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    const { emails, userId } = await request.json();
-
-    if (!emails || !Array.isArray(emails)) {
-      return NextResponse.json({ error: 'Valid emails array is required' }, { status: 400 });
+    const ip = getClientIp(request);
+    try {
+      await limiter.check(10, ip); // 10 requests per minute per IP
+    } catch {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': '60' } });
     }
+
+    const authHeader = request.headers.get('Authorization');
+    const body = await request.json();
+    
+    // Validate request body using Zod
+    const result = analyzeSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
+    }
+
+    const { emails, userId } = result.data;
 
     if (!process.env.GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is missing from environment variables.");

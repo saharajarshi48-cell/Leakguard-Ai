@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Mail, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Mail, ArrowRight, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
@@ -50,6 +50,14 @@ export default function AuthPage() {
             <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
             <p className="text-[var(--muted)]">Sign in to stop your money leaks.</p>
           </div>
+          
+          {/* Trust Messaging for Google Verification */}
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <Lock className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-[var(--muted)] leading-relaxed">
+              <strong className="text-green-400 font-medium">Secure Read-Only Access.</strong> We use this permission strictly to find receipts. Your personal emails are never read by humans or sold to third parties.
+            </p>
+          </div>
 
           <div className="space-y-4">
             <Button onClick={handleGoogleLogin} variant="outline" className="w-full flex items-center justify-center gap-3 h-12 bg-white text-black hover:bg-gray-100">
@@ -85,7 +93,7 @@ export default function AuthPage() {
           </div>
           
           <p className="mt-8 text-center text-sm text-[var(--muted)]">
-            By continuing, you agree to our <a href="#" className="text-white hover:underline">Terms of Service</a> and <a href="#" className="text-white hover:underline">Privacy Policy</a>.
+            By continuing, you agree to our <Link href="/terms" className="text-white hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-white hover:underline">Privacy Policy</Link>.
           </p>
         </Card>
       </motion.div>
