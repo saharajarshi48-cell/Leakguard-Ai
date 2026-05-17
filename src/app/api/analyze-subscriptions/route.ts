@@ -118,10 +118,26 @@ export async function POST(request: Request) {
       if (scoreError) console.error("Supabase Score Upsert Error:", scoreError);
     }
 
-    return NextResponse.json({ success: true, data: parsedData });
+    const headers = new Headers();
+    headers.set("Access-Control-Allow-Origin", "*");
+    headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    return NextResponse.json({ success: true, data: parsedData }, { headers });
 
   } catch (error: any) {
     console.error('Error analyzing subscriptions:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    
+    const headers = new Headers();
+    headers.set("Access-Control-Allow-Origin", "*");
+    return NextResponse.json({ error: error.message }, { status: 500, headers });
   }
+}
+
+export async function OPTIONS() {
+  const headers = new Headers();
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  return new NextResponse(null, { status: 204, headers });
 }

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "LeakGuard AI",
+  "version": "1.0.0",
+  "description": "Locally scan your Gmail for subscriptions and receipts without sharing inbox access.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://mail.google.com/*",
+    "*://*.getleakguard.in/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.getleakguard.in/*",
+        "http://localhost:*/*"
+      ],
+      "js": ["auth-capture.js"]
+    }
+  ]
+}

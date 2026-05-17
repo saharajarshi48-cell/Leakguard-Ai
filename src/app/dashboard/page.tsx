@@ -62,86 +62,42 @@ export default function DashboardPage() {
 
       setLoading(false);
 
-      // 3. Auto-start scan if empty and we have a fresh provider token
-      if (!hasSubs && activeSession.provider_token && scanningState === 'idle') {
-        const hasScanned = sessionStorage.getItem('hasScanned');
-        if (!hasScanned) {
-          sessionStorage.setItem('hasScanned', 'true');
-          startEmailScan(activeSession.provider_token, activeSession.user.id);
-        }
-      }
+      // 3. Set up real-time listener for new subscriptions from extension
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'subscriptions',
+            filter: `user_id=eq.${activeSession.user.id}`
+          },
+          (payload) => {
+            console.log('Real-time update received:', payload);
+            // Refresh data when extension pushes new subs
+            supabase.from('subscriptions').select('*').eq('user_id', activeSession.user.id)
+              .then(({ data }) => {
+                if (data && data.length > 0) setSubscriptions(data);
+              });
+            supabase.from('leak_scores').select('*').eq('user_id', activeSession.user.id).single()
+              .then(({ data }) => {
+                if (data) {
+                  setLeakScore(data.score);
+                  setInsights(data.insights || []);
+                }
+              });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
 
     checkUserAndFetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
-
-  const handleConnectGmail = async () => {
-    setScanningState('connecting');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        scopes: 'https://www.googleapis.com/auth/gmail.readonly',
-        redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        }
-      },
-    });
-
-    if (error) {
-      console.error('Error connecting Gmail:', error.message);
-      setScanningState('idle');
-    }
-  };
-
-  const startEmailScan = async (providerToken: string, userId: string) => {
-    try {
-      setScanningState('scanning');
-      
-      const scanRes = await fetch('/api/scan-emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ access_token: providerToken })
-      });
-      const scanData = await scanRes.json();
-      
-      if (!scanData.success || !scanData.emails) {
-        console.error("Scan API Error:", scanData.error);
-        throw new Error(scanData.error || "Failed to scan emails from Google API");
-      }
-      
-      setScanningState('analyzing');
-      
-      const analyzeRes = await fetch('/api/analyze-subscriptions', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}` 
-        },
-        body: JSON.stringify({ emails: scanData.emails, userId })
-      });
-      const analyzeData = await analyzeRes.json();
-      
-      if (!analyzeData.success) {
-        console.error("Analyze API Error:", analyzeData.error);
-        throw new Error(analyzeData.error || "Failed to analyze subscriptions with AI");
-      }
-      
-      if (analyzeData.data) {
-        setSubscriptions(analyzeData.data.subscriptions || []);
-        setLeakScore(analyzeData.data.leak_score || 100);
-        setInsights(analyzeData.data.insights || []);
-      }
-      
-      setScanningState('idle');
-    } catch (err: any) {
-      console.error("Full Error Object:", err);
-      setScanningState('idle');
-      alert(`Scan failed: ${err.message}\n\nPlease ensure you have enabled the Gmail API in Google Cloud and checked the permissions box when logging in.`);
-    }
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -233,9 +189,9 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-white mb-1">Welcome back</h1>
             <p className="text-[var(--muted)]">{user?.email}</p>
           </div>
-          <Button onClick={handleConnectGmail} variant="outline" className="gap-2 hidden sm:flex text-white">
+          <Button variant="outline" className="gap-2 hidden sm:flex text-white">
             <Sparkles className="w-4 h-4 text-[var(--accent)]" />
-            Refresh Scan
+            Waiting for Extension...
           </Button>
         </header>
 
@@ -262,17 +218,19 @@ export default function DashboardPage() {
               <Mail className="w-8 h-8 text-[var(--primary)]" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-3 z-10">
-              {hasScanned ? "No Subscriptions Found" : "Connect Your Gmail"}
+              Ready to Scan
             </h2>
             <p className="text-[var(--muted)] max-w-md mb-8 z-10">
-              {hasScanned 
-                ? "We scanned your latest emails but couldn't find any active subscriptions. Connect a different account or refresh the scan to try again." 
-                : "Connect your Gmail account so our AI can securely scan your inbox for hidden subscriptions, receipts, and free trials."}
+              Your dashboard is waiting for data. To begin, install the LeakGuard AI Browser Extension, open your Gmail, and click "Scan".
             </p>
-            <Button onClick={handleConnectGmail} disabled={scanningState !== 'idle'} size="lg" className="z-10 gap-2">
-              {scanningState !== 'idle' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
-              {scanningState !== 'idle' ? "Connecting..." : "Connect Gmail"}
-            </Button>
+            <div className="flex gap-4 z-10">
+              <Button size="lg" className="gap-2" onClick={() => window.open('/leakguard-extension.zip', '_blank')}>
+                Download Extension
+              </Button>
+              <Button variant="outline" size="lg" className="gap-2" onClick={() => window.open('https://mail.google.com', '_blank')}>
+                Open Gmail
+              </Button>
+            </div>
           </Card>
         ) : (
           <motion.div 

@@ -14,12 +14,7 @@ export default function AuthPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        scopes: 'https://www.googleapis.com/auth/gmail.readonly',
         redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        }
       },
     });
 
@@ -55,7 +50,7 @@ export default function AuthPage() {
           <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
             <Lock className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
             <p className="text-sm text-[var(--muted)] leading-relaxed">
-              <strong className="text-green-400 font-medium">Secure Read-Only Access.</strong> We use this permission strictly to find receipts. Your personal emails are never read by humans or sold to third parties.
+              <strong className="text-green-400 font-medium">Local-First Privacy.</strong> We don't ask for access to your inbox. Connect your account and use our browser extension to scan your emails securely and locally.
             </p>
           </div>
 
