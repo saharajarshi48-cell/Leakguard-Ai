@@ -2,6 +2,26 @@
 // Injected into mail.google.com when the user clicks 'Scan'
 
 (function scrapeGmail() {
+  const KEYWORDS = [
+    'subscription', 'renewal', 'invoice', 'payment', 'charged', 
+    'trial', 'membership', 'receipt', 'billing', 'premium', 
+    'monthly', 'annual'
+  ];
+
+  const BRANDS = [
+    'netflix', 'spotify', 'canva', 'adobe', 'chatgpt', 'notion', 
+    'figma', 'amazon prime', 'youtube premium', 'google one', 
+    'apple', 'microsoft'
+  ];
+
+  const isRelevant = (text) => {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    const hasKeyword = KEYWORDS.some(kw => lower.includes(kw));
+    const hasBrand = BRANDS.some(brand => lower.includes(brand));
+    return hasKeyword || hasBrand;
+  };
+
   const emails = [];
   
   // Strategy 1: Gmail List View
@@ -14,12 +34,14 @@
       const snippet = row.querySelector('.y2')?.textContent || '';
       const date = row.querySelector('td.xW span')?.title || row.querySelector('td.xW span')?.textContent || '';
       
-      if (subject || snippet) {
+      const fullText = `${sender} ${subject} ${snippet}`;
+      
+      if (isRelevant(fullText)) {
         emails.push({
-          from: sender.trim(),
-          subject: subject.trim(),
-          snippet: snippet.trim(),
-          date: date.trim()
+          from: sender.trim().substring(0, 255),
+          subject: subject.trim().substring(0, 500),
+          snippet: snippet.trim().substring(0, 1000), // Limit snippet to save payload size
+          date: date.trim().substring(0, 100)
         });
       }
     });
@@ -27,7 +49,7 @@
     // Strategy 2: Open Email View
     const openEmailHeaders = document.querySelectorAll('h2.hP');
     if (openEmailHeaders.length > 0) {
-      const subject = openEmailHeaders[0].textContent;
+      const subject = openEmailHeaders[0].textContent || '';
       const senderElement = document.querySelector('.gD');
       const sender = senderElement ? senderElement.getAttribute('email') || senderElement.textContent : '';
       
@@ -35,24 +57,26 @@
       const bodyElements = document.querySelectorAll('.a3s');
       let bodyText = '';
       if (bodyElements.length > 0) {
-        // Just take the first visible one to avoid huge payloads
-        bodyText = bodyElements[0].innerText.substring(0, 3000); 
+        bodyText = bodyElements[0].innerText;
       }
       
-      emails.push({
-        from: sender,
-        subject: subject,
-        snippet: bodyText,
-        date: new Date().toISOString()
-      });
+      const fullText = `${sender} ${subject} ${bodyText}`;
+      
+      if (isRelevant(fullText)) {
+        emails.push({
+          from: sender.substring(0, 255),
+          subject: subject.substring(0, 500),
+          snippet: bodyText.substring(0, 1000), // Severely limit body to act as a snippet
+          date: new Date().toISOString()
+        });
+      }
     }
   }
 
   // Deduplicate and clean
   const uniqueEmails = Array.from(new Set(emails.map(e => JSON.stringify(e))))
     .map(e => JSON.parse(e))
-    .filter(e => e.subject.length > 0 || e.snippet.length > 0)
-    .slice(0, 50); // Cap at 50 to avoid payload too large
+    .slice(0, 50); // Cap max raw emails found before batching
 
   return uniqueEmails;
 })();

@@ -49,18 +49,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.tabs.create({ url: `${API_URL}/dashboard` });
   });
 
+  const chunkArray = (arr, size) => {
+    return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+      arr.slice(i * size, i * size + size)
+    );
+  };
+
   btnScan.addEventListener('click', async () => {
     if (!isGmail || !authToken) return;
 
     // UI Loading state
     btnScan.disabled = true;
     scanLoader.style.display = 'inline-block';
-    scanText.textContent = 'Scraping...';
+    scanText.textContent = 'Finding subscriptions...';
     errorMsg.style.display = 'none';
     successMsg.style.display = 'none';
 
     try {
-      // 1. Inject content script to scrape
+      // 1. Inject content script to scrape locally
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ['scraper.js']
@@ -69,29 +75,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       const emails = results[0]?.result || [];
       
       if (emails.length === 0) {
-        throw new Error("No emails found on the screen. Please open an email or search for receipts.");
+        throw new Error("No subscription emails found locally. Try scrolling or opening a billing email.");
       }
 
-      scanText.textContent = 'AI Analyzing...';
+      // 2. Batching System (Max 5 emails per request to prevent payload overflow)
+      const emailBatches = chunkArray(emails, 5);
+      let totalSubscriptionsFound = 0;
 
-      // 2. Send to backend
-      const res = await fetch(`${API_URL}/api/analyze-subscriptions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ emails, userId })
-      });
+      for (let i = 0; i < emailBatches.length; i++) {
+        scanText.textContent = `Analyzing recurring payments (Batch ${i + 1}/${emailBatches.length})...`;
+        
+        const batch = emailBatches[i];
+        
+        const res = await fetch(`${API_URL}/api/analyze-subscriptions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ emails: batch, userId })
+        });
 
-      const resData = await res.json();
-      
-      if (!res.ok || !resData.success) {
-        throw new Error(resData.error || "Failed to analyze emails.");
+        const resData = await res.json();
+        
+        if (!res.ok || !resData.success) {
+          console.warn(`Batch ${i + 1} failed:`, resData.error);
+          continue; // Don't fail the whole scan if one batch fails
+        }
+
+        totalSubscriptionsFound += (resData.data.subscriptions?.length || 0);
       }
 
       // Success
-      successMsg.textContent = `Success! Found ${resData.data.subscriptions?.length || 0} subscriptions.`;
+      successMsg.textContent = `Success! Processed ${emails.length} emails and found ${totalSubscriptionsFound} subscriptions.`;
       successMsg.style.display = 'block';
       
     } catch (err) {
