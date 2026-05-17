@@ -31,7 +31,10 @@ export async function POST(request: Request) {
     try {
       await limiter.check(10, ip); // 10 requests per minute per IP
     } catch {
-      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': '60' } });
+      const headers = new Headers();
+      headers.set("Access-Control-Allow-Origin", "*");
+      headers.set('Retry-After', '60');
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers });
     }
 
     const authHeader = request.headers.get('Authorization');
@@ -40,7 +43,9 @@ export async function POST(request: Request) {
     // Validate request body using Zod
     const result = analyzeSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
+      const headers = new Headers();
+      headers.set("Access-Control-Allow-Origin", "*");
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400, headers });
     }
 
     const { emails, userId } = result.data;
